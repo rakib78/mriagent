@@ -1,0 +1,180 @@
+/**
+ * widget-voice.css — Voice mode styles
+ *
+ * Microphone button, recording indicator, voice status.
+ */
+
+/* Microphone button (next to send button) */
+.mri-voice-btn {
+  background: transparent;
+  color: var(--mri-primary);
+  border: 1px solid var(--mri-border);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.mri-voice-btn:hover {
+  border-color: var(--mri-primary);
+  background: rgba(201, 168, 76, 0.1);
+}
+
+.mri-voice-btn:active {
+  transform: scale(0.95);
+}
+
+.mri-voice-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
+
+/* Recording state */
+.mri-voice-btn.mri-recording {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: #ef4444;
+  animation: micPulse 1.5s infinite;
+}
+
+@keyframes micPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.mri-voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Voice status display */
+.mri-voice-status {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid var(--mri-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--mri-shadow);
+  font-size: 13px;
+  z-index: 450;
+  animation: slideDown 0.3s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mri-voice-status {
+    background: var(--mri-bg);
+    border-color: var(--mri-border);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.mri-voice-status.mri-hidden {
+  display: none;
+}
+
+/* Recording state */
+.mri-voice-status.mri-voice-recording {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.mri-voice-recording::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: recordingDot 1s infinite;
+}
+
+@keyframes recordingDot {
+  0%, 50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Warning state */
+.mri-voice-status.mri-voice-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+/* Error state */
+.mri-voice-status.mri-voice-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .mri-input-area {
+    flex-wrap: wrap;
+  }
+
+  .mri-voice-btn {
+    order: 1;
+    margin-left: 8px;
+  }
+
+  .mri-send-btn {
+    order: 0;
+  }
+
+  .mri-voice-status {
+    left: 50%;
+    top: auto;
+    bottom: 100px;
+    transform: translateX(-50%);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .mri-voice-btn,
+  .mri-voice-status,
+  .mri-voice-btn.mri-recording,
+  .mri-recording::before {
+    animation: none;
+  }
+}
+
+.mri-voice-btn:focus-visible {
+  outline: 2px solid var(--mri-primary);
+  outline-offset: 2px;
+}
