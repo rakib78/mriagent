@@ -1,0 +1,13 @@
+# Secrets — never track live credentials
+config/secrets.php
+
+# Local testing
+*.log
+.env.local
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

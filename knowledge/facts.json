@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "status": "DRAFT - pending owner approval before any production use",
+    "reviewed": "2026-11-20",
+    "sources": ["mri/pricing.html", "mri/index.html", "mri/llms.txt"],
+    "note": "Exact facts live here. Explanatory content (case studies, blog, FAQ) is searchable text, not stored here."
+  },
+  "business": {
+    "name": "Md Rakibul Islam",
+    "location": "Auckland, New Zealand (GMT+12)",
+    "regions_served": ["New Zealand", "Australia", "US", "UK"],
+    "positioning": "Business systems consultant: Shopify/Shopify Plus, Zendesk, HubSpot, AI automation",
+    "approved_to_mention": {"employer_nzte": true, "approved_by_owner": "2026-11-20"}
+  },
+  "contact": {
+    "email": "hello@mrakibulislam.com",
+    "phone": "+64 22 127 3952",
+    "contact_form": "https://mrakibulislam.com/#contact",
+    "booking_url": "https://cal.com/md.-rakibul-islam-vjxvrf/30min",
+    "booking_note": "30-minute discovery call. Never claim a booking is made unless Cal.com confirms it.",
+    "linkedin": "https://linkedin.com/in/rakibul",
+    "upwork": "https://www.upwork.com/freelancers/~011b28a338e5c4dbf8"
+  },
+  "services": [
+    {"id": "shopify", "name": "Shopify & Shopify Plus", "summary": "Custom theme builds, checkout optimisation, integrations to fulfilment, CRM and marketing."},
+    {"id": "zendesk", "name": "Zendesk & CX", "summary": "Ticketing, routing and SLA design, workflows and integrations."},
+    {"id": "hubspot", "name": "HubSpot & CRM", "summary": "Lifecycle workflows, lead scoring, attribution reporting, data hygiene."},
+    {"id": "ai", "name": "AI Automation", "summary": "AI support triage and agents connected to CRM and helpdesk via MCP."},
+    {"id": "migration", "name": "CRM / platform migration", "summary": "Helpdesk and store migrations, e.g. Freshdesk to Zendesk, WooCommerce to Shopify."}
+  ],
+  "platforms_listed": ["Shopify Plus", "Zendesk", "HubSpot", "Klaviyo", "Gorgias", "Make.com", "Zapier", "Freshdesk", "GoHighLevel", "WooCommerce", "Stripe", "AI Agents / MCP"],
+  "pricing": {
+    "status": "Published indicative ranges. Approved for AI disclosure by owner 2026-11-20. NOT quotes.",
+    "currency": "USD",
+    "other_currencies": "NZD and AUD pricing available on request (per pricing page; confirm wording)",
+    "caveat": "Every project is scoped and priced before work begins. Final fee depends on discovery and agreed scope.",
+    "items": [
+      {"id": "crm_audit", "name": "CRM Audit & Fix", "min": 1200, "max": 2500, "unit": "fixed project fee", "published_inclusions": ["Platform health audit report", "Workflow & automation cleanup", "Data hygiene & contact cleanup", "Up to 10 priority issue fixes", "90-day roadmap", "14-day post-delivery support"]},
+      {"id": "crm_build", "name": "Full CRM Build", "min": 4500, "max": 12000, "unit": "fixed project fee", "published_inclusions": ["Full platform build or migration (HubSpot or Zendesk)", "Workflow & automation design", "API integration with tech stack", "Lifecycle email campaign setup", "Agent training + SOP documentation", "Reporting dashboards", "30-day post-launch support"]},
+      {"id": "crm_retainer", "name": "CRM Monthly Retainer", "min": 2800, "max": 4000, "unit": "per month", "published_inclusions": ["20 dedicated hours/month", "4-hour priority response", "Monthly strategy call", "Continuous optimisation", "Cancel with 30 days notice"]},
+      {"id": "shopify_audit", "name": "Shopify Audit & CRO Fix", "min": 1500, "max": 3500, "unit": "fixed project fee", "published_inclusions": ["Store performance audit", "CRO analysis and fix priority list", "Speed optimisation", "Up to 10 priority fixes", "90-day roadmap"]},
+      {"id": "shopify_build", "name": "Custom Shopify Build", "min": 4000, "max": 15000, "unit": "fixed project fee", "published_inclusions": ["Custom Liquid theme or full store", "3PL/fulfilment integrations", "Subscription & upsell flows", "CRM sync (Zendesk, Gorgias, Klaviyo)", "Performance & conversion optimisation", "Post-launch support", "Code documentation & handoff"]},
+      {"id": "shopify_retainer", "name": "Shopify Dev Retainer", "min": 2000, "max": 4000, "unit": "per month", "published_inclusions": ["20 dedicated hours/month", "4-hour priority response", "Monthly review call", "Feature development & A/B tests", "App integrations & maintenance", "Cancel with 30 days notice"]},
+      {"id": "upwork_hourly", "name": "Upwork hourly", "min": 45, "max": 75, "unit": "per hour via Upwork", "published_inclusions": ["Flexible hours via Upwork with its payment protections"]}
+    ]
+  },
+  "timelines": {
+    "status": "PUBLISHED ON SITE BUT NOT YET APPROVED FOR AI USE - owner to confirm. Never promise; always qualify.",
+    "published": {"audit": "5 to 7 business days", "full_build": "3 to 10 weeks depending on scope"},
+    "caveat": "Confirmed in a fixed-fee proposal before work begins; depends on scope, access, integrations and client feedback."
+  },
+  "process": {
+    "first_step": "Free discovery call (no pitch deck, no obligation)",
+    "claims_to_avoid_repeating_without_checking": ["85% average sales lift", "35% resolution time reduction", "40% fewer order tickets", "90% response time reduction", "150k+ / 230k tickets migrated", "50+ CRM implementations", "Upwork stats (21,000+ hours, $200k+ earned)"],
+    "claims_note": "These are published case-study figures. The assistant may cite them only as 'published on the site for a specific engagement', never as a guarantee or typical outcome."
+  },
+  "owner_confirmations_needed": [
+    "Approve published timelines for AI use",
+    "Confirm NZD/AUD wording",
+    "Confirm which case-study figures may be quoted"
+  ]
+}
