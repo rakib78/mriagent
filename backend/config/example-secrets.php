@@ -47,5 +47,16 @@ return [
         'lead_months' => 12,
         'conversation_days' => 90,
     ],
+    'widget' => [
+        'enabled' => true,  // AI consultant widget active
+    ],
+    'voice' => [
+        'enabled' => false,  // Voice beta disabled for text-only MVP
+        'max_session_minutes' => 30,
+        'max_concurrent_sessions' => 10,
+        'budget_per_day_cents' => 10000,
+        'warn_at_minutes' => 20,
+        'model' => 'gpt-4o-realtime-preview',
+    ],
 ];
 ?>
