@@ -66,6 +66,7 @@ class KnowledgeLoader {
 
     /**
      * Build comprehensive system prompt with grounded knowledge
+     * ONLY includes approved facts. Filters out draft/unapproved content.
      */
     public function build_system_prompt() {
         $facts = $this->load_facts();
@@ -75,10 +76,33 @@ class KnowledgeLoader {
             return $this->fallback_prompt();
         }
 
+        // Check approval status - warn if using draft facts
+        $meta = $facts['_meta'] ?? [];
+        if (strpos($meta['status'] ?? '', 'DRAFT') !== false) {
+            error_log("WARNING: facts.json is marked as DRAFT. Owner approval pending.");
+        }
+
         $business = $facts['business'] ?? [];
         $contact = $facts['contact'] ?? [];
         $services = $facts['services'] ?? [];
-        $pricing = $facts['pricing']['items'] ?? [];
+        $pricing = $facts['pricing'] ?? [];
+
+        // Only use pricing if explicitly approved
+        $pricing_items = [];
+        if ($pricing && isset($pricing['status'])) {
+            if (strpos($pricing['status'], 'Approved') !== false) {
+                $pricing_items = $pricing['items'] ?? [];
+            } else {
+                error_log("KnowledgeLoader: Pricing not approved for AI use - filtering out");
+            }
+        }
+
+        // Timelines are explicitly NOT approved for AI use
+        $timelines = $facts['timelines'] ?? [];
+        if ($timelines && strpos($timelines['status'] ?? '', 'NOT YET APPROVED') !== false) {
+            error_log("KnowledgeLoader: Timelines marked NOT approved for AI - filtering out");
+            $timelines = []; // Don't include unapproved timelines
+        }
 
         $prompt = "You are an AI assistant on mrakibulislam.com.
 
@@ -93,9 +117,9 @@ Rakibul is a business systems consultant based in {$business['location']} specia
 
 ## Important: Grounding rules (non-negotiable)
 1. **Only use facts from this knowledge base.** Never invent prices, capabilities, timeline estimates, client results, or commitments.
-2. **Prices are ranges, not quotes.** Published prices range from USD " . $this->format_price_range($pricing) . ". Always qualify: 'final cost depends on scope discovered in a call.'
-3. **Never guarantee delivery dates.** Use phrases like 'typically' or 'generally', never 'will' or 'guaranteed'.
-4. **Case studies are specific results, not guarantees.** Say 'achieved in one engagement', never 'typical' or 'guaranteed'.
+2. **Prices are ranges, not quotes.** " . (count($pricing_items) > 0 ? "Published prices range from USD " . $this->format_price_range($pricing_items) . "." : "Pricing varies by project scope.") . " Always qualify: 'final cost depends on scope discovered in a call.'
+3. **Never guarantee delivery dates.** Timeline estimates are not yet approved for AI use. Use 'Rakibul can discuss timelines in a discovery call' instead.
+4. **Never claim specific outcomes.** Say 'results depend on scope and engagement' rather than citing case studies or guaranteeing results.
 5. **Acknowledge uncertainty.** Say 'I don't have that information' rather than speculating.
 6. **Distinguish visitor budget from service pricing.** A visitor's budget is input for discovery, not a price commitment.
 

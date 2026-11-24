@@ -228,6 +228,17 @@
 
       if (data.success && data.reply) {
         addMessage('assistant', data.reply);
+        // Sync session ID with server response (server may have used a fallback
+        // if our session_id was missing or malformed - keep client in sync so
+        // subsequent requests use the same session consistently)
+        if (data.session_id && data.session_id !== widget.sessionId) {
+          widget.sessionId = data.session_id;
+          try {
+            sessionStorage.setItem('mri_session_id', data.session_id);
+          } catch (e) {
+            // sessionStorage unavailable (private mode, etc) - continue in-memory only
+          }
+        }
       } else {
         addErrorMessage(data.error || 'No response. Please try again.');
       }

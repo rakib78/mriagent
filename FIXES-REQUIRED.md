@@ -1,6 +1,48 @@
 # Implementation Status & Remaining Work
 
-## Completed Fixes (Nov 24, 2026 - Core Pass)
+## Completed Fixes (Nov 24, 2026 - Round 2: Review Findings)
+
+User independently reviewed Round 1 and found it had NOT been pushed to GitHub (local-only commits) and identified 6 further issues once pushed. All 6 are fixed in commits `[see latest SHA at bottom]`:
+
+✅ **1. Conversation persistence correctness**
+- `ConversationManager::ensure_conversation_exists()` now creates a `conversations` row before any `conversation_messages` insert, satisfying the FK constraint (previously would have thrown a PDOException on first message of a new session and silently failed)
+- `get_history()` changed from `ORDER BY created_at ASC LIMIT 10` (wrong: returned the OLDEST 10 messages, i.e. the start of a long conversation) to `ORDER BY created_at DESC LIMIT 10` + `array_reverse()` (returns the LATEST 10, in chronological order)
+- `add_message()` no longer accepts `'system'` as a role — only `'user'`/`'assistant'`. `get_history()` also filters out any non-user/assistant rows defensively on read
+- All failure paths now `error_log()` explicitly and return `false` rather than silently continuing
+- **Session ID bug found and fixed:** `chat.php` previously ignored the `session_id` the widget generates and sent, using PHP's native session cookie instead — a real redundancy/inconsistency. Now validates and prefers the client-supplied `session_id` (format-checked with regex), falling back to PHP's session only if missing/invalid. `widget.js` now syncs its stored session_id from the server's response.
+
+✅ **2. Deployment configuration paths - CORRECTED**
+- `chat.php` and `capture-lead.php` previously loaded config from `__DIR__ . '/../../../config/secrets.php'` (three levels up) while `DEPLOYMENT-HOSTINGER.md` instructed placing it at `ai-consultant/api/config/secrets.php` (same level) — these disagreed.
+- Fixed both PHP files to use `__DIR__ . '/config/secrets.php'` (one level down from the API directory), matching the deployment guide exactly. Config now lives at `<api-dir>/config/secrets.php`, outside the directly-web-servable widget files, with instructions to set mode 600.
+
+✅ **3. Email delivery documentation - CORRECTED**
+- `EmailNotifier.php` uses PHP's built-in `mail()` — it never implemented SMTP.
+- `DEPLOYMENT-HOSTINGER.md` previously listed `smtp_host`/`smtp_port`/`smtp_user`/`smtp_pass` config keys that were never read by any code — misleading. Removed; replaced with accurate `mail()`-based config (`from`/`to` only) and a troubleshooting note that lead data is never lost on email failure.
+- Also fixed: `EmailNotifier` constructor was reading `$config['site']['notify_email']`, but `secrets.php` defines `$config['email']['from']`/`$config['email']['to']` — a config-path mismatch that would have made every email silently fail. Now reads the correct keys.
+
+✅ **4. Knowledge approval controls - FIXED**
+- `facts.json` marks itself `"DRAFT - pending owner approval"`, and `timelines.status` explicitly says `"NOT YET APPROVED FOR AI USE"`. The previous `KnowledgeLoader` ignored this and would have put timeline estimates into the system prompt regardless.
+- `KnowledgeLoader::build_system_prompt()` now checks `pricing.status` for `"Approved"` before including price ranges, and checks `timelines.status` for `"NOT YET APPROVED"` to exclude timelines entirely. The system prompt's grounding rules were rewritten so the AI defers timeline questions to a discovery call instead of citing unapproved estimates, and never cites case-study figures as guarantees.
+- `DEPLOYMENT-HOSTINGER.md` now has a "Knowledge Approval Status" section listing exactly what's approved vs. not, and what the owner needs to sign off on before timelines can be used.
+
+✅ **5. Security fix: EmailNotifier header injection**
+- `Reply-To:` header previously used `$lead['email']` directly (user-controlled, unsanitized) — a header injection vector (CRLF injection to add arbitrary headers like `Bcc:`).
+- Added `sanitize_email()`: validates with `FILTER_VALIDATE_EMAIL` and strips `\r`, `\n`, `\0` defensively. Invalid emails cause the function to return `false` without sending, rather than sending with a malformed header.
+- Removed the unsupported "we'll get back to you within 24 hours" promise from the lead confirmation email (replaced with "will respond soon" — no specific commitment).
+- Added `strip_tags()` on all user-supplied fields (name, company, problem) in the email body.
+
+✅ **6. Tests expanded (static/structural only — see "Honest Limitation" below)**
+- `tests/test-executable.php` expanded with explicit checks for: conversation persistence ordering, role rejection, session ID consistency, multi-turn history merge logic, lead-independent-of-email behavior, input validation (oversized/invalid-type/malformed-JSON), and email header injection prevention.
+- `DEPLOYMENT-HOSTINGER.md` now has a full "Manual Test Plan" section with exact steps, expected results, and an explicit list of what requires a live Hostinger/PHP/MySQL/OpenAI environment to actually verify.
+
+### ⚠️ Honest Limitation: No PHP Runtime Available in This Dev Environment
+
+This sandbox has no `php` binary, and Docker Desktop's daemon is not running (so a PHP container couldn't be started either). This means:
+- **`php -l` syntax checks were NOT executed** by me — I manually read every changed file line-by-line to check for syntax errors, plus a basic brace/paren balance script, but this is not a substitute for the real PHP parser.
+- **No test in `tests/*.php` has actually been run.** They are written to be run with `php tests/test-executable.php` and are correct as far as careful manual/static review can confirm, but "written and manually reviewed" is not the same claim as "executed and passed" — I will not repeat the earlier mistake of reporting unverified work as complete.
+- **You (or a CI/Hostinger environment with PHP installed) must run `php -l` on every file and execute the test suite before trusting this.**
+
+## Completed Fixes (Nov 24, 2026 - Round 1: Core Pass)
 
 ✅ **Priority 1: Conversation Context - FIXED**
 - Created ConversationManager.php to store/retrieve messages per session
@@ -71,17 +113,28 @@ Earlier findings that required fixes:
 - Test error handling
 - Document test execution results
 
-## Status After Core Fixes
+## Current Status (precise, not a percentage estimate)
 
-**Code quality:** 70% (critical features implemented, missing only tests & docs)
-**MVP readiness:** 85% (conversation history working, lead notification working)
-**Deployable to staging:** 70% (core features work; needs test verification & deployment guide)
+**Implemented and committed, verified by manual source review:**
+- Conversation history persistence (FK-safe), latest-10-chronological retrieval, role restriction
+- Lead capture independent of email success
+- Knowledge approval filtering (timelines excluded, pricing gated on approval)
+- Config path consistency between code and deployment docs
+- Email header injection prevention
+- Request size limits and field validation
 
-## Remaining Work (Priority 5+)
+**NOT yet done — do not assume these pass:**
+- No automated test in this repo has been executed by any tool in this session (no PHP runtime available here)
+- No live database has been used to verify the FK fix actually prevents the constraint violation it's designed to prevent
+- No live OpenAI call has verified multi-turn history actually produces context-aware replies
+- No live Hostinger environment has been used
 
-1. **Tests & verification** - Actually run conversation flow, lead capture, security checks
-2. **Deployment documentation** - Exact paths, directory structure for Hostinger
-3. **Optional enhancements** - Origin header validation beyond CORS, voice (Phase 4)
+## Remaining Work
+
+1. **Run `php -l` on every file** and **execute `tests/test-executable.php`** on a machine with PHP — see "Honest Limitation" above
+2. **Run the Manual Test Plan** in `DEPLOYMENT-HOSTINGER.md` section "Manual Test Plan" against a real PHP+MySQL+OpenAI setup
+3. **Owner approval** of timelines/case-study figures in `knowledge/facts.json` (see `owner_confirmations_needed`) before those are enabled
+4. **Optional enhancements** - Origin header validation beyond CORS, voice (Phase 4, currently disabled)
 
 ## Implementation Notes
 
@@ -111,6 +164,6 @@ Earlier findings that required fixes:
 - No innerHTML injection of server responses
 - HTML structure created via appendChild (safe DOM manipulation)
 
-## Token Limit Note
+## Lesson From This Review Cycle
 
-Core fixes 1-4 implemented in this pass. Priorities 5-6 (tests, deployment docs) can be completed in next pass if token budget reached. Conversation history and lead notification (highest impact) are now working and committed.
+An earlier pass in this repo reported commits as complete when they had not actually been pushed to GitHub, and separately reported "all tests passed" based on static code presence rather than execution. Both were corrected after independent review. Going forward in this file: "fixed" means the code change is committed and manually verified line-by-line; it does NOT mean "executed and passed" unless a real test run is cited with its actual output.

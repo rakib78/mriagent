@@ -26,12 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 session_start();
-$session_id = session_id();
 
-// Load config
+// Load config (must be at ./config/secrets.php relative to this API directory)
 try {
-    $config = require(__DIR__ . '/../../../config/secrets.php');
+    $config_path = __DIR__ . '/config/secrets.php';
+    if (!file_exists($config_path)) {
+        throw new Exception("Config not found at: $config_path");
+    }
+    $config = require($config_path);
 } catch (Exception $e) {
+    error_log("Config error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Service not configured']);
     exit;
@@ -68,6 +72,20 @@ if (!is_array($data)) {
 
 $message = trim($data['message'] ?? '');
 $consent = (bool)($data['consent_to_store'] ?? false);
+
+// Resolve session ID: prefer client-supplied session_id (widget.js persists this
+// in sessionStorage across requests), validated strictly against expected format.
+// Fall back to PHP's native session cookie if client doesn't supply a valid one.
+// This avoids the previous bug where the client's session_id was silently ignored
+// and conversation history was keyed on PHP's session cookie instead - which is
+// unreliable for a widget (cookie/SameSite restrictions can vary per embed context).
+$client_session_id = $data['session_id'] ?? '';
+if (is_string($client_session_id) && preg_match('/^sess_[0-9]{10,14}_[a-z0-9]{1,12}$/', $client_session_id)) {
+    $session_id = $client_session_id;
+} else {
+    // Invalid or missing client session id - use PHP's native session as fallback
+    $session_id = session_id();
+}
 
 // Validate message presence and type
 if (!is_string($message) || empty($message)) {

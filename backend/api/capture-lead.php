@@ -27,10 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 session_start();
 
-// Load config
+// Load config (must be at ./config/secrets.php relative to this API directory)
 try {
-    $config = require(__DIR__ . '/../../../config/secrets.php');
+    $config_path = __DIR__ . '/config/secrets.php';
+    if (!file_exists($config_path)) {
+        throw new Exception("Config not found at: $config_path");
+    }
+    $config = require($config_path);
 } catch (Exception $e) {
+    error_log("Config error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Service not configured']);
     exit;

@@ -10,8 +10,8 @@
 class ConversationManager {
     private $pdo;
     private $session_id;
-    private $max_messages = 10;  // Retrieve last 10 messages max
-    private $max_tokens_for_context = 2000;
+    private $max_messages = 10;  // Retrieve latest 10 messages max
+    private $conversation_created = false;
 
     public function __construct($pdo, $session_id) {
         $this->pdo = $pdo;
@@ -19,21 +19,67 @@ class ConversationManager {
     }
 
     /**
+     * Ensure conversation record exists (required for FK constraint)
+     */
+    private function ensure_conversation_exists() {
+        if ($this->conversation_created) {
+            return true;
+        }
+
+        try {
+            // Check if conversation already exists
+            $stmt = $this->pdo->prepare(
+                "SELECT id FROM conversations WHERE session_id = ?"
+            );
+            $stmt->execute([$this->session_id]);
+
+            if ($stmt->fetch()) {
+                $this->conversation_created = true;
+                return true;
+            }
+
+            // Create new conversation record
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO conversations (session_id, consent_to_store)
+                 VALUES (?, FALSE)"
+            );
+            $stmt->execute([$this->session_id]);
+            $this->conversation_created = true;
+            return true;
+        } catch (PDOException $e) {
+            error_log("ConversationManager ensure_conversation error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Get conversation history for context
-     * Returns array of messages in [role, content] format for OpenAI
+     * Returns LATEST 10 messages in chronological order (oldest to newest)
+     * for OpenAI context window
      */
     public function get_history() {
         try {
+            // Get latest 10 messages (DESC), then reverse to chronological order
             $stmt = $this->pdo->prepare(
                 "SELECT role, content FROM conversation_messages
                  WHERE session_id = ?
-                 ORDER BY created_at ASC
+                 ORDER BY created_at DESC
                  LIMIT ?"
             );
             $stmt->execute([$this->session_id, $this->max_messages]);
 
             $messages = [];
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Reverse to chronological order (oldest to newest)
+            $rows = array_reverse($rows);
+
+            foreach ($rows as $row) {
+                // STRICT: Only allow user and assistant roles
+                if (!in_array($row['role'], ['user', 'assistant'])) {
+                    error_log("ConversationManager: Skipping invalid role: " . $row['role']);
+                    continue;
+                }
                 $messages[] = [
                     'role' => $row['role'],
                     'content' => $row['content'],
@@ -49,17 +95,30 @@ class ConversationManager {
 
     /**
      * Add a message to history
-     * role: 'user' or 'assistant'
+     * role: ONLY 'user' or 'assistant' allowed (never system from browser)
      */
     public function add_message($role, $content) {
-        if (!in_array($role, ['user', 'assistant', 'system'])) {
-            error_log("Invalid message role: $role");
+        // STRICT: Only user and assistant roles allowed
+        if (!in_array($role, ['user', 'assistant'])) {
+            error_log("ConversationManager: Rejected invalid role: $role");
+            return false;
+        }
+
+        if (empty($content)) {
+            error_log("ConversationManager: Empty message");
             return false;
         }
 
         // Truncate extremely long messages
         if (strlen($content) > 10000) {
+            error_log("ConversationManager: Truncated message from " . strlen($content) . " chars");
             $content = substr($content, 0, 10000) . '...';
+        }
+
+        // Ensure conversation record exists (FK constraint)
+        if (!$this->ensure_conversation_exists()) {
+            error_log("ConversationManager: Failed to ensure conversation exists for $this->session_id");
+            return false;
         }
 
         try {
@@ -67,7 +126,12 @@ class ConversationManager {
                 "INSERT INTO conversation_messages (session_id, role, content)
                  VALUES (?, ?, ?)"
             );
-            $stmt->execute([$this->session_id, $role, $content]);
+            $result = $stmt->execute([$this->session_id, $role, $content]);
+
+            if (!$result) {
+                error_log("ConversationManager: Failed to insert message");
+                return false;
+            }
 
             return true;
         } catch (PDOException $e) {
