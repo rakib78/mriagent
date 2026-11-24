@@ -40,10 +40,30 @@ try {
 require(__DIR__ . '/../lib/RateLimiter.php');
 require(__DIR__ . '/../lib/LeadStore.php');
 require(__DIR__ . '/../lib/AuditLog.php');
+require(__DIR__ . '/../lib/EmailNotifier.php');
+
+// Request size limit (10KB max)
+$content_length = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+if ($content_length > 10000) {
+    http_response_code(413);
+    echo json_encode(['success' => false, 'error' => 'Request too large']);
+    exit;
+}
 
 // Input
 $raw = file_get_contents('php://input');
-$data = json_decode($raw, true) ?? [];
+if ($raw === false || strlen($raw) > 10000) {
+    http_response_code(413);
+    echo json_encode(['success' => false, 'error' => 'Request too large']);
+    exit;
+}
+
+$data = @json_decode($raw, true);
+if (!is_array($data)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
+    exit;
+}
 
 // Honeypot
 if (!empty($data['website_hp'])) {
@@ -52,7 +72,7 @@ if (!empty($data['website_hp'])) {
     exit;
 }
 
-// Validate
+// Validate and sanitize input
 $name = trim($data['name'] ?? '');
 $email = trim($data['email'] ?? '');
 $company = trim($data['company'] ?? '');
@@ -60,8 +80,20 @@ $problem = trim($data['problem'] ?? '');
 $consent = (bool)($data['consent'] ?? false);
 
 $errors = [];
+
+// Type checks
+if (!is_string($name)) $errors[] = 'Name must be text';
+if (!is_string($email)) $errors[] = 'Email must be text';
+if (!is_string($company)) $errors[] = 'Company must be text';
+if (!is_string($problem)) $errors[] = 'Problem must be text';
+
+// Field length validation
 if (empty($name)) $errors[] = 'Name is required';
+if (strlen($name) > 200) $errors[] = 'Name is too long (max 200 chars)';
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required';
+if (strlen($email) > 255) $errors[] = 'Email is too long';
+if (strlen($company) > 500) $errors[] = 'Company is too long (max 500 chars)';
+if (strlen($problem) > 2000) $errors[] = 'Problem description is too long (max 2000 chars)';
 if (!$consent) $errors[] = 'Consent is required';
 
 if (!empty($errors)) {
@@ -113,6 +145,11 @@ if (!$result['success']) {
     echo json_encode(['success' => false, 'error' => 'Could not save lead. Please email hello@mrakibulislam.com']);
     exit;
 }
+
+// Send notifications (don't fail if email fails - lead is already saved)
+$notifier = new EmailNotifier($config);
+$notifier->notify_lead(compact('name', 'email', 'company', 'problem'));
+$notifier->confirm_lead(compact('name', 'email'));
 
 echo json_encode(['success' => true, 'message' => 'Thank you. We\'ll be in touch']);
 ?>

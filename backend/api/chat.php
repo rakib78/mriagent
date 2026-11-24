@@ -41,24 +41,52 @@ try {
 require(__DIR__ . '/../lib/OpenAIClient.php');
 require(__DIR__ . '/../lib/RateLimiter.php');
 require(__DIR__ . '/../lib/AuditLog.php');
+require(__DIR__ . '/../lib/ConversationManager.php');
+
+// Request size limit (5KB max)
+$content_length = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+if ($content_length > 5000) {
+    http_response_code(413);
+    echo json_encode(['success' => false, 'error' => 'Request too large']);
+    exit;
+}
 
 // Input
 $raw = file_get_contents('php://input');
-$data = json_decode($raw, true) ?? [];
+if ($raw === false || strlen($raw) > 5000) {
+    http_response_code(413);
+    echo json_encode(['success' => false, 'error' => 'Request too large']);
+    exit;
+}
+
+$data = @json_decode($raw, true);
+if (!is_array($data)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
+    exit;
+}
 
 $message = trim($data['message'] ?? '');
 $consent = (bool)($data['consent_to_store'] ?? false);
 
-// Validate
-if (empty($message)) {
+// Validate message presence and type
+if (!is_string($message) || empty($message)) {
     http_response_code(422);
     echo json_encode(['success' => false, 'error' => 'Message is required']);
     exit;
 }
 
+// Validate message length
 if (strlen($message) > 1000) {
     http_response_code(422);
-    echo json_encode(['success' => false, 'error' => 'Message is too long']);
+    echo json_encode(['success' => false, 'error' => 'Message is too long (max 1000 chars)']);
+    exit;
+}
+
+// Validate message contains content (not just whitespace)
+if (strlen(trim($message)) < 2) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'error' => 'Message is too short']);
     exit;
 }
 
@@ -93,9 +121,19 @@ try {
 $audit = new AuditLog($pdo);
 $audit->log('chat_message', ['message_length' => strlen($message)]);
 
-// Call OpenAI
+// Get conversation history
+$conv = new ConversationManager($pdo, $session_id);
+$history = $conv->get_history();
+
+// Call OpenAI with history
 $client = new OpenAIClient($config);
-$result = $client->chat($message);
+$result = $client->chat_with_history($message, $history);
+
+// Save messages to history
+$conv->add_message('user', $message);
+if ($result['success']) {
+    $conv->add_message('assistant', $result['reply']);
+}
 
 if (!$result['success']) {
     http_response_code(503);

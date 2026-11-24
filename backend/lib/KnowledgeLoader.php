@@ -8,6 +8,7 @@
 
 class KnowledgeLoader {
     private $facts = null;
+    private $instructions = null;
     private $knowledge_dir;
 
     public function __construct($knowledge_dir = null) {
@@ -40,10 +41,35 @@ class KnowledgeLoader {
     }
 
     /**
+     * Load system instructions from system-instructions.md
+     */
+    public function load_instructions() {
+        if ($this->instructions !== null) {
+            return $this->instructions;
+        }
+
+        $instructions_file = $this->knowledge_dir . '/system-instructions.md';
+
+        if (!file_exists($instructions_file)) {
+            error_log("Knowledge instructions file not found: $instructions_file");
+            return '';
+        }
+
+        try {
+            $this->instructions = file_get_contents($instructions_file);
+            return $this->instructions;
+        } catch (Exception $e) {
+            error_log("Error loading instructions: " . $e->getMessage());
+            return '';
+        }
+    }
+
+    /**
      * Build comprehensive system prompt with grounded knowledge
      */
     public function build_system_prompt() {
         $facts = $this->load_facts();
+        $instructions = $this->load_instructions();
 
         if (!$facts) {
             return $this->fallback_prompt();
@@ -54,7 +80,7 @@ class KnowledgeLoader {
         $services = $facts['services'] ?? [];
         $pricing = $facts['pricing']['items'] ?? [];
 
-        $prompt = "You are an AI assistant on mrakibulislam.com, powered by Claude AI.
+        $prompt = "You are an AI assistant on mrakibulislam.com.
 
 ## Who you help
 You assist visitors who want to understand Md Rakibul Islam's services and expertise.
@@ -108,6 +134,11 @@ Phone: {$contact['phone']}
 2. Offer a discovery call or contact form for detailed needs.
 3. Keep the conversation natural and helpful.
 4. Respect privacy and consent.";
+
+        // Append system instructions if loaded
+        if (!empty($instructions)) {
+            $prompt .= "\n\n## Additional guidelines\n" . $instructions;
+        }
 
         return $prompt;
     }

@@ -31,6 +31,41 @@ class OpenAIClient {
     }
 
     /**
+     * Chat with history: includes prior messages for context
+     */
+    public function chat_with_history($message, $history = []) {
+        if (!$this->api_key) {
+            return ['success' => false, 'error' => 'OpenAI not configured'];
+        }
+
+        // Build messages: history + new message
+        $messages = array_merge($history, [
+            ['role' => 'user', 'content' => $message],
+        ]);
+
+        $payload = [
+            'model' => $this->model,
+            'max_tokens' => $this->max_tokens,
+            'temperature' => $this->temperature,
+            'messages' => array_merge(
+                [['role' => 'system', 'content' => $this->system_prompt]],
+                $messages
+            ),
+        ];
+
+        $response = $this->call_api('https://api.openai.com/v1/chat/completions', $payload);
+
+        if (!$response || !isset($response['choices'][0]['message']['content'])) {
+            return ['success' => false, 'error' => 'No response from OpenAI'];
+        }
+
+        return [
+            'success' => true,
+            'reply' => $response['choices'][0]['message']['content'],
+        ];
+    }
+
+    /**
      * Chat: single message, no streaming for now.
      */
     public function chat($message) {

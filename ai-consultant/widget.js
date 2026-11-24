@@ -289,7 +289,14 @@
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'mri-message-content';
-    contentDiv.innerHTML = text + '<br><small>Or email hello@mrakibulislam.com</small>';
+    contentDiv.textContent = text;
+
+    // Add email contact info safely
+    const emailInfo = document.createElement('small');
+    emailInfo.style.display = 'block';
+    emailInfo.style.marginTop = '8px';
+    emailInfo.textContent = 'Or email hello@mrakibulislam.com';
+    contentDiv.appendChild(emailInfo);
 
     msgDiv.appendChild(contentDiv);
     widget.messagesDiv.appendChild(msgDiv);
