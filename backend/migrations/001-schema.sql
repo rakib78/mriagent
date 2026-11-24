@@ -31,6 +31,17 @@ CREATE TABLE IF NOT EXISTS conversations (
     INDEX idx_deleted (deleted_at)
 );
 
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    role VARCHAR(16) NOT NULL,
+    content LONGTEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session (session_id),
+    INDEX idx_created (created_at),
+    CONSTRAINT fk_session FOREIGN KEY (session_id) REFERENCES conversations(session_id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     action VARCHAR(64) NOT NULL,
