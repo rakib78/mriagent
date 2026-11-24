@@ -24,8 +24,10 @@ class OpenAIClient {
     }
 
     private function load_system_prompt() {
-        // Phase 3 will inject this; for now, return a placeholder
-        return "You are an AI assistant on mrakibulislam.com helping visitors understand Shopify, Zendesk, HubSpot and AI automation services.";
+        // Load the actual grounded knowledge and system instructions
+        require_once(__DIR__ . '/KnowledgeLoader.php');
+        $loader = new KnowledgeLoader();
+        return $loader->build_system_prompt();
     }
 
     /**
